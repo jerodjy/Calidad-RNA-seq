@@ -1,0 +1,71 @@
+---
+title: "Filtros RNA-Seq"
+author: "Juan Esteban Rodriguez"
+date: "March 30, 2016"
+output: html_document
+---
+
+En esta practica vamos a analizar los resultados de calidad de diferentes datos de RNA-seq obtenidos a traves de fastqc. De forma que basado en estos resultados se decidan los filtros adecuados para mejorar la calidad de los datos (idealmente comprobandose nuevamente con fastqc). Este ultimo paso se llevara a cabo con los respectivos comandos de Trimmomatic.
+
+Se tienen los resultados de calidad de fastqc de 6 diferentes set de datos:
+
+El primero es: "good_sequence_short_fastqc"
+
+Debido a que todas las graficas y analisis salieron muy bien no hace falta aplicar ningun filtro. Asimismo, no ha de ser necesario quitar adaptadores ya que si asi fuera se verian en la seccion de adapter content o como secuencias sobrerrepresentadas, y sesgos de GC y bases en los extremos. En todo caso pueden aplicarse filtros de calidad (como SLIDINGWINDOW) y quitar adaptadores para estar seguros, pero no deberia afectar a los datos si son de muy buena calidad. Del mismo modo no hace falta filtrar por tamano de read (MINLEN) porque todos los reads son de un mismo tamano: 40 bp.
+
+```{r}
+#java -jar /home/usuario/Downloads/Trimmomatic-0.36/trimmomatic-0.36.jar SE good_sequence_short.fastq Trimmed_good_sequence_short.fastq ILLUMINACLIP:TruSeq3-SE.fa:2:30:10 SLIDINGWINDOW:4:15
+```
+
+El segundo es: "bad_sequence_fastqc"
+
+Hay muchos problemas con este set de datos. Primeramente hubo un error en las celdas de illumina, ademas se pueden ver miles de reads con una calidad baja, demasiados sitios con calidades realmente bajas, sesgos de contenido de GC, de composicion nucleotidica y de bases N y kmeros de un tamano similar (aprox. 28 bp). 
+Se recomendaria volver a hacer el analisis debido a las calidades, sin embargo, si se tratara rescatar informacion de este transcriptoma podria empezarse por cortar todos los sitios de los reads con una calidad muy mala. Posiblemente a partir de la posicion 18 podrian cortarse los reads ya que es el punto en el que las calidades empiezan a llegar al limite rojo, el mas bajo y en el que el promedio empieza a llegar a la zona amarilla, la intermedia. En cuanto a los filtros de calidad por base, es recomendable usar SLIDINGWINDOW o MAXINFO en vez de TRIMMING tal vez porque las calidades de las bases adyacentes usualmente van ligadas en vez de ser independientes y porque depende de la direccion del read (TRIMMING quita la base de baja calidad y la siguiente). Posiblemente un buen valor para SLIDINGWINDOW sea de un minimo de 21 de calidad para evitar la montana anormal de la distribucion en la grafica: Per sequence quality scores. Ademas es importante aplicar el filtro de los adaptadores ya que se vio una secuencia de un adaptador sobrerrepresentada, con un valor de 15 para descartar secuencias de adaptadores de longitud de 25 bp de acuerdo al manual.
+Por ultimo, podria ponerse un limite de longitud minima para reads que dejen de ser informativos ya que despues de cortar mas de la mitad de los reads que eran de 40 bpy filtrar por calidad podrian quedar reads de como 5 bp que no son informativos. Dependera del organismo con el que se este trabajando y su tamano del genoma, por ahora pondre un valor medio arbitrario de 10 bp. Tal vez ni sean informativos reads de 18 bp.
+Otro punto aparte a analizar es que hay varias secuencias sobrerrepresentadas lo que sugeriria una contaminacion de la muestra, para saber mas sobre el tipo de contaminacion que ocurrio y poder evitar futuras combinaciones podria hacerse un blast de estas secuencias. Esta contaminacion podria explicar la sobrerrepresentacion de secuencias, de k-meros y de duplicaciones. 
+
+```{r}
+#java -jar /home/usuario/Downloads/Trimmomatic-0.36/trimmomatic-0.36.jar SE bad_sequence.fastq Trimmed_bad_sequence.fastq ILLUMINACLIP:TruSeq3-SE.fa:2:15:10 CROP:18 SLIDINGWINDOW:4:21 MINLEN:10
+```
+
+El tercero es: "RNA-Seq_fastqc"
+
+Las fallas que se pueden ver en este set de datos son la presencia de muchos adaptadores, los cuales podrian verse reflejados en la sobrerrepresentacion de secuencias duplicadas, k-meros y sesgos en el contenido de GC y nucleotidos en las posiciones de los reads. De ahi en fuera las calidades por secuencia, celdas y posicion de los reads fue muy buena. 
+Para atender el problema de los adaptadores habrian que quitar los adaptadores, sin embargo puede que no funcione porque el analisis no los identifico en la grafica de adapter content. Si llegara funcionar habria que ver si se quitan los sesgos que podrian ser causados por estos adaptadores. Una vez visto que no funcione, al ver que todas las secuencias sobrerrepresentadas son de adaptadores podria concluirse que se amplificaron los adaptadores entre ellos al tener secuencias complementarias. Tal vez podria revisarse esto volviendo a checar los adaptadores usados probando con una secuencia palindromica larga que es de esperarse si los adaptadores se amplificaron entre ellos. Un buen valor para esto es de 15 siendo capaz de descartar las secuencias conformadas de puros adaptadores y rescatando las secuencias entre adaptadores con 25 bases de adaptador, longitud que engloba a todas las longitudes de secuencias sobrerrepresentadas.
+En cuanto a la calidad de las secuencias, se pueden identificar dos cortes en la calidad por posicion del read, el primero que es mas estricto podria ponerse despues de la posicion 30, mientras que el segundo mas laxo podria ser apartir de la posicion 37. Este ultimo permitiria secuencias mas largas que tal vez serian mas adecuados para analisis de ensamblado, mientras que podria tomarse la postura de querer evitarse cualquier error minimo a toda costa, por lo que se podrian quedar con puras calidades buenas con el primer corte. En este caso escribire el filtro laxo y un filtro de 4:15 con SLIDINGWINDOW en caso de que haya algun read con un sitio de baja calidad.
+
+```{r}
+#java -jar /home/usuario/Downloads/Trimmomatic-0.36/trimmomatic-0.36.jar SE RNA-Seq.fastq Trimmed_RNA-Seq.fastq ILLUMINACLIP:TruSeq3-SE.fa:2:15:10 CROP:37 SLIDINGWINDOW:4:15
+```
+
+El cuarto es: "small_rna_fastqc"
+
+Se muestra una gran cantidad de secuencias sobrerrepresentadas debido claramente a la presencia de adaptadores. Posiblemente esto este repercutiendo en el sesgo de nucleotidos y contenido de GC por posicion del read. Por ello, un filtro de ILLUMINACLIP seria lo mas importante a aplicar en estos datos, como el adaptador mas pequeno encontrado en los datos es de 23 bp, habra que aplicar un filtro mas pequeno que el de 15 (ya que solo descartaria adaptadores mayores a 25 bp) por ejemplo, 13 de forma que descartaria alineamientos mayores a 22 bp. 
+En la calidad por posicion del read se ve que la calidad empieza a disminuir mucho a partir de la posicion 82 (puesto que empieza a llegar a la zona roja de los graficos) por lo que se podrian quitar las ultimas 18 bases de los reads de 100 bp. Este corte tambien eliminaria el enorme sesgo que hay en el numero de nucleotidos por base que hay al final, el cual podria estar generando muchas secuencias repetidas. Por ultimo un filtro general podria ser bueno para eliminar posiciones de reads de mala calidad y una longitud minima para descartar aquellos reads que se hayan quedado muy cortados por los filtros anteriores. Elegi una longitud pequena arbitraria de 40 para procurar no descartar datos de RNA pequenos que pueden llegar a ser de 50 nucleotidos.
+
+```{r}
+#java -jar /home/usuario/Downloads/Trimmomatic-0.36/trimmomatic-0.36.jar SE small_rna.fastq Trimmed_small_rna.fastq ILLUMINACLIP:TruSeq3-SE.fa:2:12:10 CROP:18 SLIDINGWINDOW:4:15 MINLEN:40
+```
+
+El quinto es: "pacbio_srr075104_fastqc"
+
+La calidad es muy mala en todas las posiciones, por lo que se podria tomar las posiciones con una mejor calidad, es decir, despues de la base 599 y antes de la 4400 (No se si no se pueden ver unas barras porque son muy poquitos los reads de ese tamano y en realidad siguen teniendo una calidad mayor que cero y que por lo tanto no deberian ser descartados). Al mismo tiempo, con este filtro se eliminan las regiones con un sesgo de composicion nucleotidica. 
+Debido a la baja calidad de los reads se tendria que aplicar un filtro mas laxo para que no se terminen eliminando todos los reads, tal vez 2 seria bueno ya que esta por debajo de un 3/4 de los datos. 
+No se reporta ningun problema de adaptadores.
+Por ultimo, debido a todos los filtros anteriores se podrian eliminar las secuencias de una longitud minima. El numero es arbitrario, depende del enfoque que se le quieran dar a los datos.
+
+```{r}
+#java -jar /home/usuario/Downloads/Trimmomatic-0.36/trimmomatic-0.36.jar SE pacbio_srr075104.fastq Trimmed_pacbio_srr075104.fastq HEADCROP:600 CROP:2520 SLIDINGWINDOW:4:2 MINLEN:60
+```
+
+El sexto es: "454_SRR073599_fastqc"
+
+Las calidades por posicion varian mucho en este caso 
+
+......... POR HACER
+
+
+```{r}
+#java -jar /home/usuario/Downloads/Trimmomatic-0.36/trimmomatic-0.36.jar SE Partial_SRR2467141.fastq Trimmed_Partial_SRR2467141.fastq ILLUMINACLIP:TruSeq3-SE.fa:2:30:10 HEADCROP:10 SLIDINGWINDOW:4:15 MINLEN:60
+```
+

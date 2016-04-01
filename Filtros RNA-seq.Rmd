@@ -1,0 +1,119 @@
+---
+title: "Filtros RNA-Seq"
+author: "Juan Esteban Rodriguez"
+date: "March 30, 2016"
+output: html_document
+---
+
+En esta practica vamos a analizar los resultados de calidad de diferentes datos de RNA-seq obtenidos a traves de fastqc. De forma que basado en estos resultados se decidan los filtros adecuados para mejorar la calidad de los datos. Este ultimo paso se llevara a cabo con los respectivos comandos de Trimmomatic.
+
+Primero se obtienen los datos de la calidad de todos los documentos iniciales con fastqc y se guardan en la carpeta Quality.
+
+```{r}
+cd /home/juanrr/Documents/Posgrado/Maestria_en_Biología_Integrativa/Módulos/Computacional_I/Selene/Calidad_RNA-Seq
+fastqc -O Quality/ FastQC_Short/Partial_*
+java -jar /home/juanrr/Downloads/Trimmomatic-0.36/trimmomatic-0.36.jar SE FastQC_Short/Partial_SRR2467141.fastq Trimmed_Partial_SRR2467141.fastq ILLUMINACLIP:TruSeq3-SE.fa:2:30:10 SLIDINGWINDOW:4:15
+```
+
+Posteriormente, se procede a aplicar los filtros respectivos a cada set de datos.
+
+Partial_SRR2467141.fastq
+Los datos lucen muy bien en todos los graficos, no hay problemas de adaptadores y en general las calidades son buenas. Sin embargo, se ve un sesgo nucleotidico en las primeras 9 bases de los reads, por lo que habra que cortar estos segmentos. Asimismo, las ultimas 2 posiciones tienen lecturas con calidades muy bajas, por lo que tambien habria que cortarlas. Los datos lucen mejor despues del filtro, pero siguen habiendo advertencias en el contenido de GC y nucleotidos por posicion de read.
+
+```{r}
+java -jar /home/juanrr/Downloads/Trimmomatic-0.36/trimmomatic-0.36.jar SE FastQC_Short/Partial_SRR2467141.fastq Trimmed_Partial_SRR2467141.fastq CROP:90 HEADCROP:16 SLIDINGWINDOW:4:15 MINLEN:74
+```
+
+Partial_SRR2467142.fastq
+
+Todo tambien lucia bien, los problemas eran similares al anterior, solo era necesario cortar el principio y final de los reads para eliminar sesgos de composicion nucleotidica y diferencias de calidad. Sin embargo, surgio un sesgo de composicion de GC diferente y quedaron como advertencias los sesgos de composicion nucleotifica y de GC. En especial el numero de k-meros al igual que en los datos pasados.
+
+```{r}
+java -jar /home/juanrr/Downloads/Trimmomatic-0.36/trimmomatic-0.36.jar SE FastQC_Short/Partial_SRR2467142.fastq Trimmed_Partial_SRR2467142.fastq CROP:65 HEADCROP:15 SLIDINGWINDOW:6:15 MINLEN:50
+```
+
+Partial_SRR2467143.fastq
+
+Los datos son muy similares, solo los ajuste a los casos especificos. Sigue saliendo el problema de los k-meros en cuanto aplico el comando MINLEN, se compensa con SLIDINGWINDOW.
+
+```{r}
+java -jar /home/juanrr/Downloads/Trimmomatic-0.36/trimmomatic-0.36.jar SE FastQC_Short/Partial_SRR2467143.fastq Trimmed_Partial_SRR2467143.fastq CROP:70 HEADCROP:13 MINLEN:50 SLIDINGWINDOW:6:15
+```
+
+Partial_SRR2467144.fastq
+
+Estos datos tambien quedan muy bien. El problema de los k-meros se mantiene pero como advertencia.
+
+```{r}
+java -jar /home/juanrr/Downloads/Trimmomatic-0.36/trimmomatic-0.36.jar SE FastQC_Short/Partial_SRR2467144.fastq Trimmed_Partial_SRR2467144.fastq CROP:70 HEADCROP:13 MINLEN:50
+```
+
+Partial_SRR2467145.fastq
+
+De la misma manera se elimina el problema del contenido de GC y de nucleotidos por posicion conservandose la advertencia de los k-meros y composicion nucleotidica.
+
+```{r}
+java -jar /home/juanrr/Downloads/Trimmomatic-0.36/trimmomatic-0.36.jar SE FastQC_Short/Partial_SRR2467145.fastq Trimmed_Partial_SRR2467145.fastq CROP:70 HEADCROP:13 MINLEN:50
+```
+
+Partial_SRR2467146.fastq
+
+Los mismos limites de cortes son similares, pero se acrecenta el error de los k-meros. 
+
+```{r}
+java -jar /home/juanrr/Downloads/Trimmomatic-0.36/trimmomatic-0.36.jar SE FastQC_Short/Partial_SRR2467146.fastq Trimmed_Partial_SRR2467146.fastq CROP:70 HEADCROP:13 MINLEN:50
+```
+
+Partial_SRR2467147.fastq
+
+Se mantienen errores de GC, frecuencia nucleotidica y k-meros pero como advertencia.
+
+```{r}
+java -jar /home/juanrr/Downloads/Trimmomatic-0.36/trimmomatic-0.36.jar SE FastQC_Short/Partial_SRR2467147.fastq Trimmed_Partial_SRR2467147.fastq CROP:70 HEADCROP:13 MINLEN:50
+```
+
+Partial_SRR2467148.fastq
+
+Quedan bien y los k-meros quedan como advertencia.
+
+```{r}
+java -jar /home/juanrr/Downloads/Trimmomatic-0.36/trimmomatic-0.36.jar SE FastQC_Short/Partial_SRR2467148.fastq Trimmed_Partial_SRR2467148.fastq CROP:70 HEADCROP:13 MINLEN:50
+```
+
+Partial_SRR2467149.fastq
+
+A pesar de que aplique el filtro de SLIDINGWINDOW que habia funcionado en los otros documentos en este siguio marcando un error.
+
+
+```{r}
+java -jar /home/juanrr/Downloads/Trimmomatic-0.36/trimmomatic-0.36.jar SE FastQC_Short/Partial_SRR2467149.fastq Trimmed_Partial_SRR2467149.fastq CROP:70 HEADCROP:13 MINLEN:50 SLIDINGWINDOW:5:15
+```
+
+
+
+Partial_SRR2467150.fastq
+
+Los datos son similares en todos los documentos. Aqui si funciono el SLIDINGWINDOW y quedo como advertencia lo de los k-meros.
+
+
+```{r}
+java -jar /home/juanrr/Downloads/Trimmomatic-0.36/trimmomatic-0.36.jar SE FastQC_Short/Partial_SRR2467150.fastq Trimmed_Partial_SRR2467150.fastq CROP:70 HEADCROP:13 MINLEN:50 SLIDINGWINDOW:6:15
+```
+
+
+Partial_SRR2467151.fastq
+
+Los datos en este quedaron bien despues del filtro, incluso no salio ningun sesgo de composicion de GC. Sin embargo, siguio saliendo la advertencia de los k-meros
+
+
+```{r}
+java -jar /home/juanrr/Downloads/Trimmomatic-0.36/trimmomatic-0.36.jar SE FastQC_Short/Partial_SRR2467151.fastq Trimmed_Partial_SRR2467151.fastq CROP:70 HEADCROP:13 MINLEN:50 SLIDINGWINDOW:6:15
+```
+
+Por ultimo se vuelven a ver las graficas de la calidad de los datos filtrados y se ve que ahora en la mayoria de los campos se tienen buenos resultados.
+
+```{r}
+fastqc -O Quality/ Trimmed_Partial*
+```
+
+En general, todos los datos presentaron errores similares y asimismo, se mantiene la advertencia y el error de los k-meros. No supe como lidiar con este error.
